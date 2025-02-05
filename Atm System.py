@@ -1,4 +1,5 @@
 import pwinput
+import mysql.connector
 
 class Account:
     def __init__(self, account_number, pin, balance=0):
@@ -9,6 +10,7 @@ class Account:
     def deposit(self, amount):
         if amount > 0:
             self.balance += amount
+            self.update_balance()
             print(f"Deposited RS.{amount}. New balance: RS.{self.balance}")
         else:
             print("Invalid deposit amount.")
@@ -16,6 +18,7 @@ class Account:
     def withdraw(self, amount):
         if 0 < amount <= self.balance:
             self.balance -= amount
+            self.update_balance()
             print(f"Withdrew RS.{amount}. New balance: RS.{self.balance}")
         else:
             print("Insufficient balance or invalid amount.")
@@ -23,10 +26,42 @@ class Account:
     def check_balance(self):
         print(f"Current balance: RS.{self.balance}")
 
+    def update_balance(self):
+        connection = mysql.connector.connect(
+            host="localhost",
+            user="root",  
+            password="root",  
+            database="ATM_Management_System"
+        )
+        cursor = connection.cursor()
+        query = "UPDATE accounts SET balance = %s WHERE account_number = %s"
+        cursor.execute(query, (self.balance, self.account_number))
+        connection.commit()
+        cursor.close()
+        connection.close()
+
 
 class ATMSystem:
     def __init__(self):
-        self.accounts = {}
+        self.accounts = self.load_accounts()
+
+    def load_accounts(self):
+        # Connect to mysql
+        connection = mysql.connector.connect(
+            host="localhost",
+            user="root", 
+            password="root",  
+            database="ATM_Management_System"
+        )
+
+        cursor = connection.cursor()
+        cursor.execute("SELECT * FROM accounts")
+        accounts = {}
+        for (account_number, pin, balance) in cursor:
+            accounts[account_number] = Account(account_number, pin, balance)
+        cursor.close()
+        connection.close()
+        return accounts
 
     def create_account(self):
         account_number = input("Enter a new 6-digit account number: ")
@@ -42,6 +77,19 @@ class ATMSystem:
             print("Invalid PIN! It must be a 4-digit number.")
             return
         
+        connection = mysql.connector.connect(
+            host="localhost",
+            user="root",  
+            password="root",  
+            database="ATM_Management_System"
+        )
+        cursor = connection.cursor()
+        query = "INSERT INTO accounts (account_number, pin, balance) VALUES (%s, %s, %s)"
+        cursor.execute(query, (account_number, pin, 0))
+        connection.commit()
+        cursor.close()
+        connection.close()
+
         self.accounts[account_number] = Account(account_number, pin)
         print("Account created successfully!")
 
@@ -74,7 +122,7 @@ class ATMSystem:
                 print("Thank you for using the ATM. Goodbye!")
                 break
             else:
-                print(f"Invalid choise. There is no option for {choice} Please try again.")
+                print(f"Invalid choice. There is no option for {choice}. Please try again.")
 
     def account_menu(self, account):
         while True:
