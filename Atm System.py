@@ -151,7 +151,7 @@ class ATMSystem:
 
     def get_valid_amount(self, prompt):
         try:
-            amount = float(input(prompt))
+            amount = int(input(prompt))
             if amount <= 0:
                 print("Amount must be greater than zero.")
                 return None
